@@ -19,6 +19,8 @@ Code Sandbox provides an immediate, judge-style execution playground: write code
   - [Explicit Save Dialog & Atomic Writes](#explicit-save-dialog--atomic-writes)
   - [Resource Limits & Platform Parity](#resource-limits--platform-parity)
   - [Cross-Platform Native Clipboard Integration](#cross-platform-native-clipboard-integration)
+  - [Window & UI Zoom Scaling](#window--ui-zoom-scaling)
+  - [Double-Clickable Executables & Platform Installers](#double-clickable-executables--platform-installers)
 - [Platform Support & Prerequisites](#platform-support--prerequisites)
 - [Getting Started & Development](#getting-started--development)
   - [Prerequisites](#prerequisites)
@@ -46,6 +48,8 @@ The project satisfies all nine core product goals defined in [plan.md](file:///c
 | **G7** | **Test-Driven Development** | High-coverage test suites for both Rust backend crates (`sandbox-core`, `app`) and the React frontend (`vitest` + `@testing-library/react`). |
 | **G8** | **Decision Transparency** | Comprehensive architectural and design decision log recorded in [work.md](file:///c:/My_Files/riz_code/work.md). |
 | **G9** | **Native Clipboard Integration** | Full clipboard support inside the editor (`Ctrl+C`/`Ctrl+V`/`Ctrl+X`/`Ctrl+A` on Windows & Linux, `Cmd+C`/`Cmd+V`/`Cmd+X`/`Cmd+A` on macOS) with whole-line copying and native fallback. |
+| **G10** | **Window & UI Zoom Scaling** | Keyboard shortcuts (`Ctrl++`/`Ctrl+-`/`Ctrl+0` on Windows/Linux, `Cmd` on macOS) work globally and inside CodeMirror; status/toolbar zoom indicator with interactive +/- controls. |
+| **G11** | **Standalone Executables & Installers** | Double-clickable standalone binaries and release installers for Windows (.exe/.msi), macOS (.dmg/.app), and Linux (.AppImage/.deb) uploaded via CI. |
 
 ---
 
@@ -72,6 +76,10 @@ The design choices governing the application are documented in [work.md](file://
 - **D17 — Dedicated plan and decision log**: [plan.md](file:///c:/My_Files/riz_code/plan.md) specifies system design; [work.md](file:///c:/My_Files/riz_code/work.md) tracks chronological rationale.
 - **D18 — Platform modifier abstraction (`Mod`)**: Unified keymap using CodeMirror's `Mod` abstraction maps cleanly to `Cmd` on macOS and `Ctrl` on Windows and Linux.
 - **D19 — Dual-layer clipboard fallback**: Primary route uses the DOM Clipboard API; falls back seamlessly to Tauri's native `tauri-plugin-clipboard-manager` when webview permissions are restricted.
+- **D20 — Matrix CI across Ubuntu, Windows, and macOS**: Validates `cargo test` and `npm test` across all three major platforms, ensuring genuine execution of Windows Job Objects.
+- **D21 — Unified multi-platform onboarding and documentation**: Comprehensive guides covering all prerequisites, libraries, and workflows across Windows, macOS, and Linux.
+- **D22 — Window & UI zoom scaling semantics**: Discrete 70% to 200% zoom scaling, CodeMirror keymap delegation, CSS root scaling, and interactive indicator controls.
+- **D23 — Standalone double-clickable executables & installers**: Tauri v2 bundling configured for Windows (NSIS .exe, .msi, standalone .exe), Linux (.deb, .AppImage, standalone binary), and macOS (.dmg, .app) with CI artifact distribution.
 
 ---
 
@@ -207,15 +215,33 @@ Code Sandbox enforces rigorous execution bounds across all supported platforms:
 - **VIM Coexistence**: While VIM mode is active, native clipboard commands remain fully functional in addition to standard VIM yanking (`y`) and putting (`p`).
 - **Resilient Fallback**: If the webview's DOM `navigator.clipboard` API is restricted by platform permissions or headless test runners, the app transparently delegates to the backend Tauri clipboard plugin (`tauri-plugin-clipboard-manager`).
 
+### Window & UI Zoom Scaling
+
+- **Zoom Shortcuts**:
+  - **Zoom In**: `Ctrl + +` or `Ctrl + =` (Windows/Linux) / `Cmd + +` or `Cmd + =` (macOS)
+  - **Zoom Out**: `Ctrl + -` (Windows/Linux) / `Cmd + -` (macOS)
+  - **Reset Zoom**: `Ctrl + 0` (Windows/Linux) / `Cmd + 0` (macOS)
+- **Universal Event Routing**: Zoom shortcuts work both inside CodeMirror editor (via `lib/keymap.ts`) and globally across the entire UI window.
+- **Proportional UI Scaling**: Dynamic CSS scaling uniformly adjusts editor fonts, toolbar controls, stdin/stdout panels, and status bar elements (range: 70% to 200% in 10% increments).
+- **Interactive Controls**: A dedicated zoom percentage badge in the toolbar and status bar provides one-click `+`, `-`, and `Reset` buttons.
+
+### Double-Clickable Executables & Platform Installers
+
+Code Sandbox produces standalone double-clickable executables and standard installer packages for easy distribution:
+- **Windows**: Self-contained double-clickable `code-sandbox-app.exe`, plus guided NSIS setup installer (`.exe`) and MSI package (`.msi`).
+- **Linux**: Standalone executable, portable double-clickable `.AppImage` (bundled with desktop icon and entry), and `.deb` package.
+- **macOS**: Drag-and-drop `.dmg` installer disk image and native `.app` application bundle.
+- **Automated CI Releases**: The GitHub Actions matrix workflow builds release packages on every runner and uploads them as downloadable artifacts.
+
 ---
 
 ## Platform Support & Prerequisites
 
-| Platform | Compiler / Toolchain | Packaging Target | Native Dialogs | Resource Backend |
-|---|---|---|---|---|
-| **Windows 10/11** | MSVC (x86_64) | `.msi` / NSIS `.exe` | `IFileDialog` | Windows Job Objects |
-| **macOS 12+** | Apple Clang / Xcode | `.dmg` / `.app` | `NSSavePanel` | POSIX `setrlimit` |
-| **Linux (Ubuntu/Fedora/Arch)** | GCC / Clang | `.deb` / `.rpm` / AppImage | GTK FileChooser | POSIX `setrlimit` |
+| Platform | Compiler / Toolchain | Packaging Target | Native Dialogs | Resource Backend | Zoom Shortcuts |
+|---|---|---|---|---|---|
+| **Windows 10/11** | MSVC (x86_64) | NSIS `.exe` / `.msi` / standalone `.exe` | `IFileDialog` | Windows Job Objects | `Ctrl++`, `Ctrl+-`, `Ctrl+0` |
+| **macOS 12+** | Apple Clang / Xcode | `.dmg` / `.app` bundle / standalone binary | `NSSavePanel` | POSIX `setrlimit` | `Cmd++`, `Cmd+-`, `Cmd+0` |
+| **Linux (Ubuntu/Fedora/Arch)** | GCC / Clang | `.deb` / `.AppImage` / standalone binary | GTK FileChooser | POSIX `setrlimit` | `Ctrl++`, `Ctrl+-`, `Ctrl+0` |
 
 ---
 

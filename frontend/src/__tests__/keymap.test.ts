@@ -25,17 +25,26 @@ import {
   cutSelection,
   pasteClipboard,
   selectionText,
+  zoomCombo,
+  zoomDomGuard,
+  zoomKeymap,
 } from "../lib/keymap";
+import { registerZoomHandlers } from "../lib/zoom";
 // Pre-load the API module so that the dynamic import inside `lib/clipboard.ts` resolves
 // immediately instead of during the assertion.
 import "../lib/api";
 
-/** Creates an editor with the clipboard extensions. */
+/** Creates an editor with the clipboard and zoom extensions. */
 function createEditor(doc = "hello world") {
   const view = new EditorView({
     state: EditorState.create({
       doc,
-      extensions: [clipboardKeymap, clipboardDomGuard],
+      extensions: [
+        clipboardKeymap,
+        clipboardDomGuard,
+        zoomKeymap,
+        zoomDomGuard,
+      ],
     }),
     parent: document.body,
   });
@@ -213,5 +222,56 @@ describe("clipboard keymap", () => {
     expect(keys).toContain("Mod-v");
     expect(keys).toContain("Mod-x");
     expect(keys).toContain("Mod-a");
+  });
+
+  it("recognises zoom shortcuts in zoomCombo", () => {
+    const makeEvent = (init: KeyboardEventInit) =>
+      new KeyboardEvent("keydown", init);
+
+    expect(zoomCombo(makeEvent({ key: "=", ctrlKey: true }))).toBe("zoom-in");
+    expect(zoomCombo(makeEvent({ key: "+", ctrlKey: true }))).toBe("zoom-in");
+    expect(zoomCombo(makeEvent({ key: "-", ctrlKey: true }))).toBe("zoom-out");
+    expect(zoomCombo(makeEvent({ key: "_", ctrlKey: true }))).toBe("zoom-out");
+    expect(zoomCombo(makeEvent({ key: "0", ctrlKey: true }))).toBe("zoom-reset");
+    expect(zoomCombo(makeEvent({ key: "=" }))).toBeNull();
+    expect(zoomCombo(makeEvent({ key: "=", ctrlKey: true, altKey: true }))).toBeNull();
+  });
+
+  it("exposes zoom Mod bindings in CodeMirror keymap", () => {
+    const state = EditorState.create({ extensions: [zoomKeymap] });
+    const keys = state
+      .facet(keymap)
+      .flat()
+      .map((binding) => binding.key);
+
+    expect(keys).toContain("Mod-=");
+    expect(keys).toContain("Mod-+");
+    expect(keys).toContain("Mod--");
+    expect(keys).toContain("Mod-_");
+    expect(keys).toContain("Mod-0");
+  });
+
+  it("intercepts zoom chords in the editor without mutating document", () => {
+    const zoomIn = vi.fn();
+    const zoomOut = vi.fn();
+    const resetZoom = vi.fn();
+    registerZoomHandlers({ zoomIn, zoomOut, resetZoom });
+
+    const view = createEditor("initial");
+
+    press(view, "=", { ctrl: true });
+    expect(zoomIn).toHaveBeenCalledTimes(1);
+    expect(view.state.doc.toString()).toBe("initial");
+
+    press(view, "-", { ctrl: true });
+    expect(zoomOut).toHaveBeenCalledTimes(1);
+    expect(view.state.doc.toString()).toBe("initial");
+
+    press(view, "0", { ctrl: true });
+    expect(resetZoom).toHaveBeenCalledTimes(1);
+    expect(view.state.doc.toString()).toBe("initial");
+
+    registerZoomHandlers(null);
+    view.destroy();
   });
 });

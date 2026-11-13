@@ -62,3 +62,39 @@ jobs:
 
       - name: Run backend cargo tests
         run: cargo test --workspace --verbose
+
+      - name: Build Tauri application packages
+        working-directory: frontend
+        run: npm run tauri build
+
+      - name: Upload Linux desktop packages
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-sandbox-linux
+          path: |
+            target/release/code-sandbox-app
+            target/release/bundle/deb/*.deb
+            target/release/bundle/appimage/*.AppImage
+          if-no-files-found: warn
+
+      - name: Upload Windows installer and executable
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-sandbox-windows
+          path: |
+            target/release/code-sandbox-app.exe
+            target/release/bundle/nsis/*.exe
+            target/release/bundle/msi/*.msi
+          if-no-files-found: warn
+
+      - name: Upload macOS application bundle and DMG
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-sandbox-macos
+          path: |
+            target/release/bundle/dmg/*.dmg
+            target/release/bundle/macos/*.app
+          if-no-files-found: warn

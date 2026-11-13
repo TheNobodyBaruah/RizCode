@@ -22,6 +22,7 @@ import { selectAll } from "@codemirror/commands";
 import { getCM, Vim } from "@replit/codemirror-vim";
 
 import { isMac, readClipboard, writeClipboard } from "./clipboard";
+import { triggerResetZoom, triggerZoomIn, triggerZoomOut } from "./zoom";
 
 /** Whether nothing is selected (the cursor is just sitting there). */
 export function selectionIsEmpty(view: EditorView): boolean {
@@ -151,6 +152,96 @@ export const clipboardDomGuard = Prec.highest(
       if (action === "copy") copySelection(view);
       else if (action === "cut") cutSelection(view);
       else pasteClipboard(view);
+
+      return true;
+    },
+  }),
+);
+
+/** Recognises the platform's zoom in/out/reset combination. */
+export function zoomCombo(
+  event: KeyboardEvent,
+): "zoom-in" | "zoom-out" | "zoom-reset" | null {
+  const mod = isMac() ? event.metaKey : event.ctrlKey;
+  if (!mod || event.altKey) return null;
+
+  if (event.key === "=" || event.key === "+") {
+    return "zoom-in";
+  }
+  if (event.key === "-" || event.key === "_") {
+    return "zoom-out";
+  }
+  if (event.key === "0") {
+    return "zoom-reset";
+  }
+  return null;
+}
+
+/**
+ * Keymap for zoom in/out/reset in CodeMirror.
+ * Bound to Mod-+, Mod-=, Mod--, Mod-_, and Mod-0.
+ */
+export const zoomKeymap = Prec.highest(
+  keymap.of([
+    {
+      key: "Mod-=",
+      run: () => {
+        triggerZoomIn();
+        return true;
+      },
+      preventDefault: true,
+    },
+    {
+      key: "Mod-+",
+      run: () => {
+        triggerZoomIn();
+        return true;
+      },
+      preventDefault: true,
+    },
+    {
+      key: "Mod--",
+      run: () => {
+        triggerZoomOut();
+        return true;
+      },
+      preventDefault: true,
+    },
+    {
+      key: "Mod-_",
+      run: () => {
+        triggerZoomOut();
+        return true;
+      },
+      preventDefault: true,
+    },
+    {
+      key: "Mod-0",
+      run: () => {
+        triggerResetZoom();
+        return true;
+      },
+      preventDefault: true,
+    },
+  ]),
+);
+
+/**
+ * A DOM level guard for zoom chords so CodeMirror never types +, -, or 0 into the buffer
+ * and browser defaults are cleanly prevented.
+ */
+export const zoomDomGuard = Prec.highest(
+  EditorView.domEventHandlers({
+    keydown(event) {
+      const action = zoomCombo(event);
+      if (!action) return false;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (action === "zoom-in") triggerZoomIn();
+      else if (action === "zoom-out") triggerZoomOut();
+      else if (action === "zoom-reset") triggerResetZoom();
 
       return true;
     },

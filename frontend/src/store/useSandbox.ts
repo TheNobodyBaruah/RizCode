@@ -11,6 +11,14 @@ import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialo
 import * as api from "../lib/api";
 import type { Language, RunOutcome, RunStatus, RuntimeInfo } from "../lib/api";
 import { LANGUAGES, describeLanguage } from "../lib/languages";
+import {
+  DEFAULT_ZOOM,
+  MAX_ZOOM,
+  MIN_ZOOM,
+  ZOOM_STEP,
+  clampZoom,
+  registerZoomHandlers,
+} from "../lib/zoom";
 
 /** How long the app waits after the last keystroke before it runs the code. */
 export const AUTO_RUN_DEBOUNCE_MS = 800;
@@ -49,6 +57,8 @@ export interface SandboxState {
   runtimes: RuntimeInfo[];
   /** The last error that happened outside of a run. */
   error: string | null;
+  /** UI zoom percentage (70 to 200, default 100). */
+  zoom: number;
 }
 
 /** The actions exposed by the store. */
@@ -62,6 +72,10 @@ export interface SandboxActions {
   save: () => Promise<string | null>;
   open: () => Promise<string | null>;
   dismissError: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  resetZoom: () => void;
+  setZoom: (value: number) => void;
 }
 
 /** The store and its actions. */
@@ -77,6 +91,37 @@ export function useSandbox(): SandboxState & SandboxActions {
   const [dirty, setDirty] = useState(false);
   const [runtimes, setRuntimes] = useState<RuntimeInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoomState] = useState<number>(DEFAULT_ZOOM);
+
+  const zoomIn = useCallback(() => {
+    setZoomState((prev) => Math.min(MAX_ZOOM, prev + ZOOM_STEP));
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    setZoomState((prev) => Math.max(MIN_ZOOM, prev - ZOOM_STEP));
+  }, []);
+
+  const resetZoom = useCallback(() => {
+    setZoomState(DEFAULT_ZOOM);
+  }, []);
+
+  const setZoom = useCallback((value: number) => {
+    setZoomState(clampZoom(value));
+  }, []);
+
+  // Apply zoom to document element and CSS variable (G10 / D22)
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.style.zoom = `${zoom}%`;
+      document.documentElement.style.setProperty("--ui-zoom", `${zoom}%`);
+    }
+  }, [zoom]);
+
+  // Register active zoom handlers for CodeMirror keymap integration
+  useEffect(() => {
+    registerZoomHandlers({ zoomIn, zoomOut, resetZoom });
+    return () => registerZoomHandlers(null);
+  }, [zoomIn, zoomOut, resetZoom]);
 
   // Runs are sequence numbered: a result that arrives after a newer run started is discarded.
   const runIdRef = useRef(0);
@@ -205,6 +250,7 @@ export function useSandbox(): SandboxState & SandboxActions {
       dirty,
       runtimes,
       error,
+      zoom,
     }),
     [
       language,
@@ -218,6 +264,7 @@ export function useSandbox(): SandboxState & SandboxActions {
       dirty,
       runtimes,
       error,
+      zoom,
     ],
   );
 
@@ -232,6 +279,10 @@ export function useSandbox(): SandboxState & SandboxActions {
     save,
     open,
     dismissError,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    setZoom,
   };
 }
 

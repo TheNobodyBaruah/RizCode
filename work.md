@@ -335,3 +335,47 @@ step-by-step setup, test, and build instructions for Windows, macOS, and Linux.
 on Ubuntu/Debian), and development workflows. Tying the documentation directly to `plan.md` and
 `work.md` maintains project transparency (G8).
 
+---
+
+## 2026-11-13 — Zoom controls & release packaging (continuation session)
+
+### D22. Window & UI Zoom Scaling Semantics
+
+**Decision.** The application supports smooth scaling across a discrete 70% to 200% zoom range
+(in 10% steps, default 100%). Zooming is triggered by keyboard shortcuts and UI controls:
+* Keyboard shortcuts: `Mod-+` or `Mod-=` (zoom in), `Mod--` (zoom out), `Mod-0` (reset zoom to 100%).
+  On macOS, `Mod` maps to `Cmd`; on Windows and Linux, `Mod` maps to `Ctrl`.
+* Event routing: The key bindings are registered both globally via a `window` keydown event listener
+  and explicitly in CodeMirror's keymap (`frontend/src/lib/keymap.ts`) so CodeMirror never swallows
+  or prevents zoom chords when the editor has focus.
+* Scaling mechanism: Zoom adjusts an application-wide CSS custom property (`--ui-zoom`) and/or CSS `zoom`
+  styling that uniformly scales font sizes, padding, toolbars, editor lines, and output consoles.
+* Visual controls: An interactive zoom indicator appears in the status bar/toolbar displaying the current
+  percentage with clickable `+`, `-`, and `Reset` buttons for accessibility without requiring keyboard chords.
+
+**Why.** Direct user requirement: *"Support increasing and decreasing the size/zoom of the window/content
+using `Ctrl + +` / `Ctrl + -` (and `Ctrl + 0` reset, or `Cmd` on macOS), both globally and inside
+CodeMirror, with status/toolbar zoom indicator."* Code readability on varied display resolutions (high-DPI,
+projectors, small laptop screens) is an essential usability feature for a coding sandbox.
+
+---
+
+### D23. Standalone Double-Clickable Executables & Release Installers
+
+**Decision.** Tauri v2 bundling (`tauri.conf.json`) and GitHub Actions CI (`.github/workflows/ci.yml`)
+are configured to generate double-clickable standalone binaries and release installer packages for all
+target platforms:
+* **Windows**: Standalone double-clickable executable `code-sandbox-app.exe`, plus NSIS installer `.exe`
+  and `.msi` package.
+* **Linux**: Portable standalone executable, self-contained double-clickable `.AppImage` (with desktop
+  entry and icon), and standard `.deb` Debian package.
+* **macOS**: Drag-and-drop `.dmg` installer disk image and native `.app` application bundle.
+* **CI Artifacts**: The CI workflow executes `npm run tauri build` (or target bundle creation) across
+  `ubuntu-latest`, `windows-latest`, and `macos-latest`, archiving and uploading the installer and
+  executable bundles via `actions/upload-artifact@v4`.
+
+**Why.** Direct user requirement: *"Produce a double-clickable executable and installer packages for
+Windows, macOS, and Linux (standalone executable, Linux AppImage/deb, Windows NSIS .exe/.msi, macOS .dmg,
+with GitHub Actions CI artifact uploads)."* Users expect to download an installer or standalone binary
+and launch the desktop sandbox directly with a double-click, without needing to run developer CLI tools.
+

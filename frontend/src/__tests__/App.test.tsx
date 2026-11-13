@@ -210,4 +210,36 @@ describe("Code Sandbox", () => {
       expect(screen.getByTitle(/rustc/)).toBeInTheDocument();
     });
   });
+
+  it("adjusts zoom via toolbar controls and keyboard shortcuts", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Default zoom is 100%
+    const zoomLevel = screen.getByTestId("zoom-level");
+    expect(zoomLevel).toHaveTextContent("100%");
+
+    // Click zoom in button
+    const zoomInBtns = screen.getAllByRole("button", { name: "Zoom in" });
+    await user.click(zoomInBtns[0]);
+    expect(zoomLevel).toHaveTextContent("110%");
+
+    // Keyboard shortcut zoom out (Ctrl+-)
+    await userEvent.keyboard("{Control>}{-}{/Control}");
+    expect(zoomLevel).toHaveTextContent("100%");
+
+    // Keyboard shortcut zoom in (Ctrl+=)
+    await userEvent.keyboard("{Control>}{=}{/Control}");
+    expect(zoomLevel).toHaveTextContent("110%");
+
+    // Reset zoom via click
+    await user.click(zoomLevel);
+    expect(zoomLevel).toHaveTextContent("100%");
+
+    // Keyboard shortcut reset (Ctrl+0)
+    await userEvent.keyboard("{Control>}{=}{/Control}");
+    expect(zoomLevel).toHaveTextContent("110%");
+    await userEvent.keyboard("{Control>}{0}{/Control}");
+    expect(zoomLevel).toHaveTextContent("100%");
+  });
 });

@@ -15,6 +15,7 @@
   --warn: #ffcb6b;
   --mono: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, Consolas,
     "Liberation Mono", monospace;
+  --ui-zoom: 100%;
 }
 
 * {
@@ -414,4 +415,68 @@ select:hover,
 
 .status-hint {
   color: var(--text-faint);
+}
+
+.status-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.zoom-btn {
+  background: #1b202b;
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  border-radius: 3px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.zoom-label-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.zoom-label-btn:hover {
+  color: var(--accent);
+}
+
+.button-small {
+  padding: 3px 6px;
+  font-size: 11px;
+}
+
+.button-zoom-level {
+  font-family: var(--mono);
+  font-size: 11px;
+  min-width: 44px;
+  text-align: center;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }

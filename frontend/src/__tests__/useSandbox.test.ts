@@ -212,4 +212,51 @@ describe("the sandbox store", () => {
 
     vi.useRealTimers();
   });
+
+  it("manages zoom level between 70% and 200%", async () => {
+    const { result } = await renderStore();
+    expect(result.current.zoom).toBe(100);
+
+    act(() => {
+      result.current.zoomIn();
+    });
+    expect(result.current.zoom).toBe(110);
+    expect(document.documentElement.style.zoom).toBe("110%");
+    expect(document.documentElement.style.getPropertyValue("--ui-zoom")).toBe(
+      "110%",
+    );
+
+    // Zoom in repeatedly to test upper bound of 200%
+    for (let i = 0; i < 15; i++) {
+      act(() => {
+        result.current.zoomIn();
+      });
+    }
+    expect(result.current.zoom).toBe(200);
+
+    // Reset zoom
+    act(() => {
+      result.current.resetZoom();
+    });
+    expect(result.current.zoom).toBe(100);
+
+    // Zoom out repeatedly to test lower bound of 70%
+    for (let i = 0; i < 10; i++) {
+      act(() => {
+        result.current.zoomOut();
+      });
+    }
+    expect(result.current.zoom).toBe(70);
+
+    // Direct clamp via setZoom
+    act(() => {
+      result.current.setZoom(140);
+    });
+    expect(result.current.zoom).toBe(140);
+
+    act(() => {
+      result.current.setZoom(500);
+    });
+    expect(result.current.zoom).toBe(200);
+  });
 });

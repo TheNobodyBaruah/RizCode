@@ -12,6 +12,10 @@ export interface StatusBarProps {
   dirty: boolean;
   /** The label of the platform's primary modifier (`⌘` or `Ctrl`). */
   modifier: string;
+  zoom?: number;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onResetZoom?: () => void;
 }
 
 /** A human readable label for a run status. */
@@ -44,6 +48,10 @@ export function StatusBar({
   filePath,
   dirty,
   modifier,
+  zoom = 100,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
 }: StatusBarProps) {
   return (
     <footer className="status-bar">
@@ -60,6 +68,39 @@ export function StatusBar({
       ) : null}
 
       {truncated ? <span className="status-item">truncated</span> : null}
+
+      <div className="status-item status-zoom" data-testid="zoom-controls">
+        <button
+          type="button"
+          className="zoom-btn"
+          onClick={onZoomOut}
+          disabled={zoom <= 70}
+          aria-label="Zoom out"
+          title={`Zoom out (${modifier}+-)`}
+        >
+          -
+        </button>
+        <button
+          type="button"
+          className="zoom-label-btn"
+          onClick={onResetZoom}
+          aria-label="Reset zoom"
+          title={`Reset zoom to 100% (${modifier}+0)`}
+          data-testid="zoom-level"
+        >
+          {zoom}%
+        </button>
+        <button
+          type="button"
+          className="zoom-btn"
+          onClick={onZoomIn}
+          disabled={zoom >= 200}
+          aria-label="Zoom in"
+          title={`Zoom in (${modifier}++)`}
+        >
+          +
+        </button>
+      </div>
 
       <span className="spacer" />
 

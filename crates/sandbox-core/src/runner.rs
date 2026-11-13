@@ -222,6 +222,17 @@ impl Runner {
         })?;
 
         let mut cmd = Command::new(&rustc.program);
+        if let Some(parent) = Path::new(&rustc.program).parent() {
+            if let Ok(curr) = std::env::var("PATH") {
+                let mut paths: Vec<_> = std::env::split_paths(&curr).collect();
+                if !paths.iter().any(|p| p == parent) {
+                    paths.insert(0, parent.to_path_buf());
+                    if let Ok(joined) = std::env::join_paths(paths) {
+                        cmd.env("PATH", joined);
+                    }
+                }
+            }
+        }
         cmd.arg("--edition")
             .arg("2021")
             .arg("-C")
@@ -275,7 +286,7 @@ impl Runner {
         cwd: &Path,
         started: Instant,
     ) -> RunOutcome {
-        let is_node = matches!(&program, Program::Script { program, .. } if program == "node" || program == "nodejs");
+        let is_node = matches!(&program, Program::Script { program, .. } if program == "node" || program == "nodejs" || program.to_string_lossy().contains("node"));
 
         let mut cmd = match program {
             Program::Native { path } => Command::new(path),
@@ -284,7 +295,18 @@ impl Runner {
                 run_args,
                 script,
             } => {
-                let mut cmd = Command::new(program);
+                let mut cmd = Command::new(&program);
+                if let Some(parent) = Path::new(&program).parent() {
+                    if let Ok(curr) = std::env::var("PATH") {
+                        let mut paths: Vec<_> = std::env::split_paths(&curr).collect();
+                        if !paths.iter().any(|p| p == parent) {
+                            paths.insert(0, parent.to_path_buf());
+                            if let Ok(joined) = std::env::join_paths(paths) {
+                                cmd.env("PATH", joined);
+                            }
+                        }
+                    }
+                }
                 cmd.args(&run_args);
                 cmd.arg(script);
                 cmd

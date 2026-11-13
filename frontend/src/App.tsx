@@ -16,9 +16,14 @@ export default function App() {
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
 
-  const { run, toggleVim } = sandbox;
+  const { run, toggleVim, zoomIn, zoomOut, resetZoom } = sandbox;
 
-  // Global shortcuts: Ctrl/Cmd+Enter runs, Ctrl/Cmd+Shift+V toggles the VIM mode.
+  // Global shortcuts:
+  // - Ctrl/Cmd+Enter: runs
+  // - Ctrl/Cmd+Shift+V: toggles the VIM mode
+  // - Ctrl/Cmd + (+ or =): zoom in
+  // - Ctrl/Cmd + (- or _): zoom out
+  // - Ctrl/Cmd + 0: reset zoom
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.metaKey && !event.ctrlKey) return;
@@ -31,12 +36,30 @@ export default function App() {
       if (event.shiftKey && event.key.toLowerCase() === "v") {
         event.preventDefault();
         toggleVim();
+        return;
+      }
+      if (!event.altKey) {
+        if (event.key === "=" || event.key === "+") {
+          event.preventDefault();
+          zoomIn();
+          return;
+        }
+        if (event.key === "-" || event.key === "_") {
+          event.preventDefault();
+          zoomOut();
+          return;
+        }
+        if (event.key === "0") {
+          event.preventDefault();
+          resetZoom();
+          return;
+        }
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [run, toggleVim]);
+  }, [run, toggleVim, zoomIn, zoomOut, resetZoom]);
 
   const onPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     draggingRef.current = true;
@@ -75,6 +98,10 @@ export default function App() {
         dirty={sandbox.dirty}
         filePath={sandbox.filePath}
         runtimes={sandbox.runtimes}
+        zoom={sandbox.zoom}
+        onZoomIn={sandbox.zoomIn}
+        onZoomOut={sandbox.zoomOut}
+        onResetZoom={sandbox.resetZoom}
       />
 
       {sandbox.error ? (
@@ -135,6 +162,10 @@ export default function App() {
         filePath={sandbox.filePath}
         dirty={sandbox.dirty}
         modifier={modifierLabel()}
+        zoom={sandbox.zoom}
+        onZoomIn={sandbox.zoomIn}
+        onZoomOut={sandbox.zoomOut}
+        onResetZoom={sandbox.resetZoom}
       />
     </div>
   );

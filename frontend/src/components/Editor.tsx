@@ -22,7 +22,12 @@ import { rust } from "@codemirror/lang-rust";
 import { getCM, vim } from "@replit/codemirror-vim";
 
 import type { Language } from "../lib/api";
-import { clipboardDomGuard, clipboardKeymap } from "../lib/keymap";
+import {
+  clipboardDomGuard,
+  clipboardKeymap,
+  zoomDomGuard,
+  zoomKeymap,
+} from "../lib/keymap";
 import { sandboxHighlighting, sandboxTheme } from "../lib/theme";
 import { setVimRunHandler } from "../lib/vim";
 
@@ -118,6 +123,8 @@ export function Editor({
           vimCompartment.current.of(vimEnabled ? vim({ status: false }) : []),
           clipboardKeymap,
           clipboardDomGuard,
+          zoomKeymap,
+          zoomDomGuard,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
               onChangeRef.current(update.state.doc.toString());

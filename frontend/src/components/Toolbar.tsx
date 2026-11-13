@@ -15,6 +15,10 @@ export interface ToolbarProps {
   dirty: boolean;
   filePath: string | null;
   runtimes: RuntimeInfo[];
+  zoom?: number;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onResetZoom?: () => void;
 }
 
 /** The toolbar above the editor. */
@@ -32,6 +36,10 @@ export function Toolbar({
   dirty,
   filePath,
   runtimes,
+  zoom = 100,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
 }: ToolbarProps) {
   return (
     <header className="toolbar">
@@ -120,6 +128,38 @@ export function Toolbar({
         >
           VIM
         </button>
+
+        <div className="zoom-controls" aria-label="Zoom controls" data-testid="toolbar-zoom">
+          <button
+            type="button"
+            className="button button-small"
+            onClick={onZoomOut}
+            disabled={zoom <= 70}
+            aria-label="Zoom out"
+            title="Zoom out"
+          >
+            -
+          </button>
+          <button
+            type="button"
+            className="button button-small button-zoom-level"
+            onClick={onResetZoom}
+            aria-label="Reset zoom"
+            title="Reset zoom to 100%"
+          >
+            {zoom}%
+          </button>
+          <button
+            type="button"
+            className="button button-small"
+            onClick={onZoomIn}
+            disabled={zoom >= 200}
+            aria-label="Zoom in"
+            title="Zoom in"
+          >
+            +
+          </button>
+        </div>
 
         <span className="file-name" title={filePath ?? "not saved yet"}>
           {filePath ? (

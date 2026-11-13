@@ -18,6 +18,8 @@ built with **Tauri v2** (Rust backend) and a **React + TypeScript + CodeMirror 6
 | G7 | Test-driven development | Every module has tests written before implementation |
 | G8 | Decision transparency | Every decision recorded in `work.md` |
 | G9 | Native clipboard copy/paste | `Ctrl+C` / `Ctrl+V` on Windows & Linux, `Cmd+C` / `Cmd+V` on macOS, inside the editor |
+| G10 | Window & UI Zoom Scaling | `Ctrl + +` / `Ctrl + =` (in), `Ctrl + -` (out), `Ctrl + 0` (reset) on Windows/Linux; `Cmd` equivalents on macOS; works globally and inside CodeMirror; status/toolbar zoom indicator |
+| G11 | Standalone Executables & Installers | Self-contained double-clickable binaries and release installers for Windows (.exe/.msi), macOS (.dmg/.app), and Linux (.AppImage/.deb) uploaded via CI |
 
 ---
 
@@ -40,6 +42,8 @@ built with **Tauri v2** (Rust backend) and a **React + TypeScript + CodeMirror 6
 | D13 | Source files are written atomically (temp file + rename) to avoid partial saves |
 | D14 | The app is *sandbox-like* (limits + temp dir), **not** a security boundary |
 | D18 | Clipboard uses the platform-native modifier: `Mod` = `Cmd` on macOS, `Ctrl` on Windows/Linux |
+| D22 | Zoom & window scaling: discrete 70%–200% scale, CodeMirror delegation, CSS scaling, UI controls |
+| D23 | Standalone double-clickable executables & installers across OSes with CI artifact uploads |
 
 ---
 
@@ -235,6 +239,21 @@ platforms the app:
 
 Both routes are behind one `lib/clipboard.ts` module so the editor code stays platform-agnostic.
 
+### 5.2 Window & UI Zoom Scaling (G10 / D22)
+
+Users must be able to adjust the UI and editor content scale:
+
+| OS | Zoom In | Zoom Out | Zoom Reset |
+|---|---|---|---|
+| Windows | `Ctrl++` / `Ctrl+=` | `Ctrl+-` | `Ctrl+0` |
+| Linux | `Ctrl++` / `Ctrl+=` | `Ctrl+-` | `Ctrl+0` |
+| macOS | `Cmd++` / `Cmd+=` | `Cmd+-` | `Cmd+0` |
+
+* **CodeMirror Keymap Integration**: Explicitly bound in `lib/keymap.ts` using `Mod-+`, `Mod-=`, `Mod--`, `Mod-0` so CodeMirror does not swallow or drop zoom keyboard events.
+* **Global Window Listener**: Window-level `keydown` listener ensures zoom works when focus is in stdin, stdout/stderr, or toolbar buttons.
+* **Scaling Strategy**: Scaled via CSS zoom / dynamic root scaling (`--ui-zoom`) affecting fonts, buttons, panels, and editors proportionally (steps: 70% to 200% in 10% increments).
+* **UI Controls**: Zoom percentage indicator badge in the status bar / toolbar with clickable `+`, `-`, and `Reset` buttons for accessibility without requiring keyboard chords.
+
 ---
 
 ## 6. Test-driven development strategy
@@ -278,12 +297,16 @@ Both routes are behind one `lib/clipboard.ts` module so the editor code stays pl
 * Clipboard fallback: `lib/clipboard.ts` prefers the DOM clipboard API and falls back to the
   Tauri clipboard commands when the DOM API is unavailable (jsdom / Linux webview restrictions).
 
-### 6.4 CI matrix
+### 6.4 CI matrix & release artifact packaging (G11 / D23)
 
 `.github/workflows/ci.yml` runs `cargo test` + `npm test` on `ubuntu-latest`, `windows-latest`,
 `macos-latest`. This is how the Windows Job Objects code is genuinely **executed** (it cannot run on
 this WSL machine; locally it is only compile-checked with
 `cargo check --target x86_64-pc-windows-msvc`).
+
+In addition, the CI workflow builds release packages via `npm run tauri build` and uploads double-clickable
+standalone executables and installers (Windows: `.msi` and NSIS `.exe`; macOS: `.dmg` and `.app`; Linux:
+`.AppImage` and `.deb`) as downloadable workflow artifacts using `actions/upload-artifact@v4`.
 
 ---
 
@@ -302,11 +325,12 @@ this WSL machine; locally it is only compile-checked with
 
 | | Windows | macOS | Linux |
 |---|---|---|---|
-| Build | `npm run tauri build` → `.msi` / NSIS `.exe` | `.dmg` / `.app` | `.deb` / `.rpm` / AppImage |
+| Build / Bundles | `npm run tauri build` → NSIS `.exe`, `.msi`, standalone binary | `npm run tauri build` → `.dmg`, `.app` bundle, standalone binary | `npm run tauri build` → `.deb`, `.AppImage`, standalone binary |
 | Save dialog | IFileDialog | NSSavePanel | GTK dialog |
 | Interpreter discovery | `py -3`, `python`, `node`, `rustc` | `python3`, `node`, `rustc` | `python3`, `node`, `rustc` |
 | Resource limits | Job Objects | rlimits | rlimits |
 | Clipboard shortcuts | `Ctrl+C` / `Ctrl+V` | `Cmd+C` / `Cmd+V` | `Ctrl+C` / `Ctrl+V` |
+| Zoom shortcuts | `Ctrl++`, `Ctrl+-`, `Ctrl+0` | `Cmd++`, `Cmd+-`, `Cmd+0` | `Ctrl++`, `Ctrl+-`, `Ctrl+0` |
 | Notes | `CREATE_NO_WINDOW` so no console flashes | — | needs `libwebkit2gtk-4.1-dev` |
 
 ---
@@ -333,4 +357,8 @@ this WSL machine; locally it is only compile-checked with
 - [ ] VIM mode works, `:w` runs the program.
 - [ ] Save button opens the native dialog and writes the file; Open reads it back.
 - [ ] `Ctrl+C` / `Ctrl+V` (Windows, Linux) and `Cmd+C` / `Cmd+V` (macOS) copy and paste in the editor.
+- [ ] `Ctrl + +` / `Ctrl + -` / `Ctrl + 0` (and `Cmd` equivalents on macOS) adjust and reset UI and editor zoom level smoothly.
+- [ ] Status bar / toolbar displays active zoom percentage with interactive +/- controls.
+- [ ] Tauri build produces double-clickable standalone executables and release installer packages for Windows, macOS, and Linux.
+- [ ] CI workflow builds release packages and uploads them as downloadable artifacts.
 - [ ] `work.md` contains every decision taken, with rationale and date.
