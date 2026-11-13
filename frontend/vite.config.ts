@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 // Tauri expects a fixed port and does not want the terminal cleared.
 export default defineConfig({
   plugins: [react()],
+  base: "./",
   clearScreen: false,
   server: {
     port: 1420,

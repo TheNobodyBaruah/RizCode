@@ -379,3 +379,33 @@ Windows, macOS, and Linux (standalone executable, Linux AppImage/deb, Windows NS
 with GitHub Actions CI artifact uploads)."* Users expect to download an installer or standalone binary
 and launch the desktop sandbox directly with a double-click, without needing to run developer CLI tools.
 
+---
+
+### D24. Cross-platform CI parity: Darwin `libc` rlimits and Windows CRLF stream normalization
+
+**Decision.**
+1. In `crates/sandbox-core/src/platform/unix.rs`, abstract the `setrlimit` resource type with a platform-gated `RlimitResource` (`libc::__rlimit_resource_t` on Linux, `libc::c_int` on macOS/Darwin).
+2. In `crates/sandbox-core/tests/integration.rs`, use binary I/O for Python stdin echoing (`sys.stdout.buffer.write(sys.stdin.buffer.read())`) and normalize CRLF (`.replace("\r\n", "\n")`) in stream assertions across Windows and Unix runners.
+
+**Why.**
+- On macOS, `libc` does not define Linux's glibc-internal `__rlimit_resource_t`, causing compile failure `E0425`. Darwin uses standard `c_int`.
+- On Windows, Python default text stdout translates `\n` to `\r\n` (CRLF), causing string mismatch assertions against raw `\n` literals. Normalizing line endings ensures tests verify semantic output across all operating systems without platform bias.
+
+---
+
+### D25. WebKitGTK Software Compositing and Tauri Custom Protocol Bundling
+
+**Decision.**
+1. In `crates/app/src/main.rs` and `crates/app/src/lib.rs`, initialize environment variables on Linux prior to Tauri builder startup:
+   - `LIBGL_ALWAYS_SOFTWARE=1`: Prevents Mesa/Zink driver initialization crashes and dri2 screen failures in virtualized X11/Wayland (WSLg) environments.
+   - `WEBKIT_DISABLE_COMPOSITING_MODE=1` & `WEBKIT_DISABLE_DMABUF_RENDERER=1`: Forces WebKitGTK to use Cairo software rasterization rather than failing GPU EGL compositing, eliminating blank/black screens on launch.
+2. In `crates/app/Cargo.toml`, explicitly include `custom-protocol` and `devtools` features in `tauri`:
+   - `custom-protocol`: Ensures Tauri registers the asset protocol to serve packaged frontend files from `frontendDist` (`../../frontend/dist`) when compiled directly with `cargo build --release`.
+   - `devtools`: Allows opening developer inspection tools during testing.
+3. In `frontend/vite.config.ts`, set `base: "./"` so bundled script and style asset links resolve relatively under custom protocol URI schemes (`tauri://localhost`).
+
+**Why.**
+Fixes the blank screen issue encountered on desktop launch under WSLg/Linux desktop environments, ensuring reliable rendering of the Code Sandbox interface and immediate usability.
+
+
+

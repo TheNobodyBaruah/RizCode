@@ -70,8 +70,13 @@ impl Sandbox {
     }
 }
 
+#[cfg(target_os = "linux")]
+type RlimitResource = libc::__rlimit_resource_t;
+#[cfg(not(target_os = "linux"))]
+type RlimitResource = libc::c_int;
+
 /// Installs a single rlimit.
-fn set_limit(resource: libc::__rlimit_resource_t, value: u64) -> io::Result<()> {
+fn set_limit(resource: RlimitResource, value: u64) -> io::Result<()> {
     let limit = libc::rlimit {
         rlim_cur: value as libc::rlim_t,
         rlim_max: value as libc::rlim_t,

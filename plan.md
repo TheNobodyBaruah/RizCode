@@ -44,6 +44,8 @@ built with **Tauri v2** (Rust backend) and a **React + TypeScript + CodeMirror 6
 | D18 | Clipboard uses the platform-native modifier: `Mod` = `Cmd` on macOS, `Ctrl` on Windows/Linux |
 | D22 | Zoom & window scaling: discrete 70%–200% scale, CodeMirror delegation, CSS scaling, UI controls |
 | D23 | Standalone double-clickable executables & installers across OSes with CI artifact uploads |
+| D24 | Cross-platform CI parity: Darwin `RlimitResource` abstraction and Windows CRLF stream normalization |
+| D25 | WebKitGTK software compositing and Tauri custom protocol bundling (blank screen fix) |
 
 ---
 

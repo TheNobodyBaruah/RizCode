@@ -72,18 +72,18 @@ fn main() {
     let req = RunRequest::new(Language::Rust, code).with_stdin(input);
     let outcome = runner.run(&req);
     assert_eq!(outcome.status, RunStatus::Completed, "stderr: {}", outcome.stderr);
-    assert_eq!(outcome.stdout, input);
+    assert_eq!(outcome.stdout.replace("\r\n", "\n"), input);
 }
 
 #[test]
 fn python_echoes_stdin_verbatim() {
     let runner = test_runner();
-    let code = "import sys\nsys.stdout.write(sys.stdin.read())";
+    let code = "import sys\nsys.stdout.buffer.write(sys.stdin.buffer.read())";
     let input = "multiline\npython\nstdin\ntest\n";
     let req = RunRequest::new(Language::Python, code).with_stdin(input);
     let outcome = runner.run(&req);
     assert_eq!(outcome.status, RunStatus::Completed, "stderr: {}", outcome.stderr);
-    assert_eq!(outcome.stdout, input);
+    assert_eq!(outcome.stdout.replace("\r\n", "\n"), input);
 }
 
 #[test]
@@ -98,7 +98,7 @@ process.stdout.write(input);
     let req = RunRequest::new(Language::JavaScript, code).with_stdin(input);
     let outcome = runner.run(&req);
     assert_eq!(outcome.status, RunStatus::Completed, "stderr: {}", outcome.stderr);
-    assert_eq!(outcome.stdout, input);
+    assert_eq!(outcome.stdout.replace("\r\n", "\n"), input);
 }
 
 // -----------------------------------------------------------------------------
@@ -117,8 +117,8 @@ fn main() {
     let req = RunRequest::new(Language::Rust, code);
     let outcome = runner.run(&req);
     assert_eq!(outcome.status, RunStatus::Completed);
-    assert_eq!(outcome.stdout, "standard-out-msg\n");
-    assert_eq!(outcome.stderr, "standard-err-msg\n");
+    assert_eq!(outcome.stdout.replace("\r\n", "\n"), "standard-out-msg\n");
+    assert_eq!(outcome.stderr.replace("\r\n", "\n"), "standard-err-msg\n");
 }
 
 #[test]
@@ -132,8 +132,8 @@ sys.stderr.write("py-stderr\n")
     let req = RunRequest::new(Language::Python, code);
     let outcome = runner.run(&req);
     assert_eq!(outcome.status, RunStatus::Completed);
-    assert_eq!(outcome.stdout, "py-stdout\n");
-    assert_eq!(outcome.stderr, "py-stderr\n");
+    assert_eq!(outcome.stdout.replace("\r\n", "\n"), "py-stdout\n");
+    assert_eq!(outcome.stderr.replace("\r\n", "\n"), "py-stderr\n");
 }
 
 #[test]
@@ -146,8 +146,8 @@ process.stderr.write("js-stderr\n");
     let req = RunRequest::new(Language::JavaScript, code);
     let outcome = runner.run(&req);
     assert_eq!(outcome.status, RunStatus::Completed);
-    assert_eq!(outcome.stdout, "js-stdout\n");
-    assert_eq!(outcome.stderr, "js-stderr\n");
+    assert_eq!(outcome.stdout.replace("\r\n", "\n"), "js-stdout\n");
+    assert_eq!(outcome.stderr.replace("\r\n", "\n"), "js-stderr\n");
 }
 
 // -----------------------------------------------------------------------------
@@ -306,7 +306,10 @@ fn main() {
     let req = RunRequest::new(Language::Rust, code);
     let outcome = runner.run(&req);
     assert_eq!(outcome.status, RunStatus::Completed);
-    assert_eq!(outcome.stdout, "$(id) `cat /etc/passwd` && echo injection ; ");
+    assert_eq!(
+        outcome.stdout.replace("\r\n", "\n"),
+        "$(id) `cat /etc/passwd` && echo injection ; "
+    );
 }
 
 // -----------------------------------------------------------------------------
