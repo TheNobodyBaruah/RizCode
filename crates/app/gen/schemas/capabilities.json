@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Capabilities required by the Code Sandbox main window.","local":true,"windows":["main"],"permissions":["core:default","core:window:allow-set-title","dialog:default","clipboard-manager:allow-write-text","clipboard-manager:allow-read-text"]}}
