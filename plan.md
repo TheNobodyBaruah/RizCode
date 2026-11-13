@@ -46,6 +46,7 @@ built with **Tauri v2** (Rust backend) and a **React + TypeScript + CodeMirror 6
 | D23 | Standalone double-clickable executables & installers across OSes with CI artifact uploads |
 | D24 | Cross-platform CI parity: Darwin `RlimitResource` abstraction and Windows CRLF stream normalization |
 | D25 | WebKitGTK software compositing and Tauri custom protocol bundling (blank screen fix) |
+| D26 | Standard Tauri workspace structure: `frontend/src-tauri` directory eliminates symlink failure on Windows |
 
 ---
 
@@ -58,21 +59,23 @@ code_sandbox/
 ├── Cargo.toml                   # workspace root
 ├── .github/workflows/ci.yml     # windows / macos / linux matrix
 ├── crates/
-│   ├── sandbox-core/            # pure Rust, zero Tauri deps → fully unit-testable
-│   │   ├── Cargo.toml
-│   │   ├── src/
-│   │   │   ├── lib.rs           # public API re-exports
-│   │   │   ├── language.rs      # Language enum, detection, file naming
-│   │   │   ├── limits.rs        # Limits config + defaults
-│   │   │   ├── runner.rs        # compile + execute pipeline
-│   │   │   ├── workspace.rs     # throwaway temp dir lifecycle
-│   │   │   ├── fs.rs            # atomic write / read helpers
-│   │   │   └── platform/
-│   │   │       ├── mod.rs       # cfg dispatch
-│   │   │       ├── unix.rs      # setrlimit limits
-│   │   │       └── windows.rs   # Job Object limits
-│   │   └── tests/               # integration tests (real rustc / python3 / node)
-│   └── app/                     # Tauri v2 crate (thin adapter over sandbox-core)
+│   └── sandbox-core/            # pure Rust, zero Tauri deps → fully unit-testable
+│       ├── Cargo.toml
+│       ├── src/
+│       │   ├── lib.rs           # public API re-exports
+│       │   ├── language.rs      # Language enum, detection, file naming
+│       │   ├── limits.rs        # Limits config + defaults
+│       │   ├── runner.rs        # compile + execute pipeline
+│       │   ├── workspace.rs     # throwaway temp dir lifecycle
+│       │   ├── fs.rs            # atomic write / read helpers
+│       │   └── platform/
+│       │       ├── mod.rs       # cfg dispatch
+│       │       ├── unix.rs      # setrlimit limits
+│       │       └── windows.rs   # Job Object limits
+│       └── tests/               # integration tests (real rustc / python3 / node)
+├── frontend/
+│   ├── src/                     # React + CodeMirror 6 components
+│   └── src-tauri/               # Tauri v2 crate (thin adapter over sandbox-core)
 │       ├── Cargo.toml
 │       ├── tauri.conf.json
 │       ├── capabilities/default.json
@@ -99,7 +102,7 @@ code_sandbox/
 ### 4.1 Backend split (D6)
 
 ```
-frontend (React)  ──invoke──▶  Tauri commands (crates/app)  ──▶  sandbox-core
+frontend (React)  ──invoke──▶  Tauri commands (frontend/src-tauri)  ──▶  sandbox-core
                                                                   ├─ language.rs
                                                                   ├─ runner.rs
                                                                   ├─ limits.rs

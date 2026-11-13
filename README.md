@@ -149,7 +149,7 @@ code_sandbox/
 └───────────────────────────┬────────────────────────────┘
                             │ Tauri IPC invoke
 ┌───────────────────────────▼────────────────────────────┐
-│                crates/app (Tauri Shell)                │
+│           frontend/src-tauri (Tauri Shell)             │
 │  - commands.rs (run_code, save_file, clipboard_*, ...) │
 └───────────────────────────┬────────────────────────────┘
                             │ Rust API call
@@ -325,7 +325,7 @@ npm run tauri build
 ```
 
 Installers and binaries will be generated in:
-`crates/app/target/release/bundle/`
+`target/release/bundle/`
 
 ---
 

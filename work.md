@@ -396,16 +396,36 @@ and launch the desktop sandbox directly with a double-click, without needing to 
 ### D25. WebKitGTK Software Compositing and Tauri Custom Protocol Bundling
 
 **Decision.**
-1. In `crates/app/src/main.rs` and `crates/app/src/lib.rs`, initialize environment variables on Linux prior to Tauri builder startup:
+1. In `frontend/src-tauri/src/main.rs` and `frontend/src-tauri/src/lib.rs`, initialize environment variables on Linux prior to Tauri builder startup:
    - `LIBGL_ALWAYS_SOFTWARE=1`: Prevents Mesa/Zink driver initialization crashes and dri2 screen failures in virtualized X11/Wayland (WSLg) environments.
    - `WEBKIT_DISABLE_COMPOSITING_MODE=1` & `WEBKIT_DISABLE_DMABUF_RENDERER=1`: Forces WebKitGTK to use Cairo software rasterization rather than failing GPU EGL compositing, eliminating blank/black screens on launch.
-2. In `crates/app/Cargo.toml`, explicitly include `custom-protocol` and `devtools` features in `tauri`:
-   - `custom-protocol`: Ensures Tauri registers the asset protocol to serve packaged frontend files from `frontendDist` (`../../frontend/dist`) when compiled directly with `cargo build --release`.
+2. In `frontend/src-tauri/Cargo.toml`, explicitly include `custom-protocol` and `devtools` features in `tauri`:
+   - `custom-protocol`: Ensures Tauri registers the asset protocol to serve packaged frontend files from `frontendDist` (`../dist`) when compiled directly with `cargo build --release`.
    - `devtools`: Allows opening developer inspection tools during testing.
 3. In `frontend/vite.config.ts`, set `base: "./"` so bundled script and style asset links resolve relatively under custom protocol URI schemes (`tauri://localhost`).
 
 **Why.**
 Fixes the blank screen issue encountered on desktop launch under WSLg/Linux desktop environments, ensuring reliable rendering of the Code Sandbox interface and immediate usability.
+
+---
+
+### D26. Standard Tauri Directory Layout (`frontend/src-tauri`) & Elimination of Git Symlinks
+
+**Decision.**
+Move the Tauri desktop application crate from `crates/app` into `frontend/src-tauri` as a concrete directory (replacing the previous `frontend/src-tauri -> ../crates/app` symlink). Update workspace manifests and relative paths accordingly:
+1. Root `Cargo.toml`: Register `members = ["crates/sandbox-core", "frontend/src-tauri"]`.
+2. `frontend/src-tauri/Cargo.toml`: Point dependency `sandbox-core = { path = "../../crates/sandbox-core" }`.
+3. `frontend/src-tauri/tauri.conf.json`: Set `frontendDist` to `../dist`.
+
+**Why.**
+On Windows runners in GitHub Actions (and on Windows development machines generally), `git checkout` does not materialize POSIX symlinks as real filesystem links without administrator privileges / Developer Mode (`core.symlinks = false`). Furthermore, when Cargo on Windows resolves workspace manifests, it does not canonicalize NTFS junctions/symlinks, triggering the following fatal metadata error during `npm run tauri build`:
+```
+error: current package believes it's in a workspace when it's not:
+current:   D:\a\RizCode\RizCode\frontend\src-tauri\Cargo.toml
+workspace: D:\a\RizCode\RizCode\Cargo.toml
+```
+Placing the Tauri crate directly at `frontend/src-tauri` conforms to the canonical Tauri v2 workspace project structure, requires zero symlinks on any operating system, runs `beforeBuildCommand: "npm run build"` directly in `frontend/`, and ensures Cargo workspace resolution succeeds seamlessly across Windows, Linux, and macOS without path confusion.
+
 
 
 

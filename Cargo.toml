@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/sandbox-core", "crates/app"]
+members = ["crates/sandbox-core", "frontend/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
