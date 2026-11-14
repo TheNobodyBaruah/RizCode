@@ -174,9 +174,29 @@ fn find_fallback_paths(program: &str) -> Vec<PathBuf> {
             }
             if let Some(ref h) = home {
                 paths.push(h.join(".cargo").join("bin").join(if cfg!(windows) { "rustc.exe" } else { "rustc" }));
+                let rustup_toolchains = h.join(".rustup").join("toolchains");
+                if let Ok(entries) = std::fs::read_dir(&rustup_toolchains) {
+                    for entry in entries.flatten() {
+                        paths.push(entry.path().join("bin").join(if cfg!(windows) { "rustc.exe" } else { "rustc" }));
+                    }
+                }
+            }
+            if let Some(rustup_home) = std::env::var_os("RUSTUP_HOME").map(PathBuf::from) {
+                let toolchains = rustup_home.join("toolchains");
+                if let Ok(entries) = std::fs::read_dir(&toolchains) {
+                    for entry in entries.flatten() {
+                        paths.push(entry.path().join("bin").join(if cfg!(windows) { "rustc.exe" } else { "rustc" }));
+                    }
+                }
             }
             #[cfg(unix)]
-            paths.push(PathBuf::from("/usr/local/cargo/bin/rustc"));
+            {
+                paths.push(PathBuf::from("/opt/homebrew/bin/rustc"));
+                paths.push(PathBuf::from("/usr/local/bin/rustc"));
+                paths.push(PathBuf::from("/usr/bin/rustc"));
+                paths.push(PathBuf::from("/opt/local/bin/rustc"));
+                paths.push(PathBuf::from("/usr/local/cargo/bin/rustc"));
+            }
         }
         "node" | "nodejs" => {
             if let Some(nvm_bin) = std::env::var_os("NVM_BIN").map(PathBuf::from) {
@@ -201,8 +221,10 @@ fn find_fallback_paths(program: &str) -> Vec<PathBuf> {
             }
             #[cfg(unix)]
             {
+                paths.push(PathBuf::from("/opt/homebrew/bin/node"));
                 paths.push(PathBuf::from("/usr/local/bin/node"));
                 paths.push(PathBuf::from("/usr/bin/node"));
+                paths.push(PathBuf::from("/opt/local/bin/node"));
             }
             #[cfg(windows)]
             {
@@ -220,8 +242,10 @@ fn find_fallback_paths(program: &str) -> Vec<PathBuf> {
         "python3" | "python" => {
             #[cfg(unix)]
             {
-                paths.push(PathBuf::from(format!("/usr/bin/{program}")));
+                paths.push(PathBuf::from(format!("/opt/homebrew/bin/{program}")));
                 paths.push(PathBuf::from(format!("/usr/local/bin/{program}")));
+                paths.push(PathBuf::from(format!("/usr/bin/{program}")));
+                paths.push(PathBuf::from(format!("/opt/local/bin/{program}")));
                 if let Some(ref h) = home {
                     paths.push(h.join(".local").join("bin").join(program));
                 }

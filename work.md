@@ -426,6 +426,25 @@ workspace: D:\a\RizCode\RizCode\Cargo.toml
 ```
 Placing the Tauri crate directly at `frontend/src-tauri` conforms to the canonical Tauri v2 workspace project structure, requires zero symlinks on any operating system, runs `beforeBuildCommand: "npm run build"` directly in `frontend/`, and ensures Cargo workspace resolution succeeds seamlessly across Windows, Linux, and macOS without path confusion.
 
+---
+
+### D27. macOS Darwin Resource Limits (`EINVAL`) and Extended Toolchain Fallback Paths
+
+**Decision.**
+1. In `crates/sandbox-core/src/platform/unix.rs`, constrain `RLIMIT_AS` and `RLIMIT_NPROC` to `#[cfg(target_os = "linux")]` in the `pre_exec` child process hook. On macOS / Darwin, enforce POSIX `RLIMIT_CPU` and `RLIMIT_FSIZE`.
+2. In `set_limit`, inspect the current resource limits with `libc::getrlimit` before calling `libc::setrlimit`. Clamp the soft limit `rlim_cur = value.min(current.rlim_max)` and preserve `rlim_max = current.rlim_max`.
+3. In `platform::unix::tests::applies_rlimits_to_a_child_process`, test `ulimit -v; ulimit -t` under Linux and `ulimit -t` under non-Linux (`ulimit -v` is unsupported on macOS shells).
+4. In `crates/sandbox-core/src/runtime.rs`, expand `find_fallback_paths`:
+   - For `rustc`: search `/opt/homebrew/bin/rustc`, `/usr/local/bin/rustc`, `/usr/bin/rustc`, `/opt/local/bin/rustc`, and scan toolchains in `~/.rustup/toolchains/*/bin/rustc` and `$RUSTUP_HOME/toolchains/*/bin/rustc`.
+   - For `node`: search `/opt/homebrew/bin/node`, `/usr/local/bin/node`, `/usr/bin/node`, `/opt/local/bin/node`.
+   - For `python`: search `/opt/homebrew/bin/{program}`, `/usr/local/bin/{program}`, `/usr/bin/{program}`, `/opt/local/bin/{program}`.
+
+**Why.**
+- On macOS (Darwin/XNU kernel), user-space processes cannot modify `RLIMIT_NPROC` via `setrlimit()`; calling `setrlimit(libc::RLIMIT_NPROC, ...)` returns `-1` with `errno = EINVAL` (code 22: "Invalid argument"). Similarly, setting `RLIMIT_AS` fails with `EINVAL` on macOS when the limit is below the memory footprint allocated by system dynamic libraries during process startup.
+- Unconditionally setting both `rlim_cur` and `rlim_max` to `value` in `set_limit` can trigger `EPERM` or `EINVAL` if `value` exceeds the existing hard limit. Using `getrlimit` to set `rlim_cur = value.min(hard)` and keeping `rlim_max = max` guarantees `rlim_cur <= rlim_max` and never attempts an unprivileged hard limit increase.
+- On GitHub Actions macOS runners (`macos-latest` / `macos-14` Apple Silicon), `rustc` is managed via Homebrew under `/opt/homebrew/bin/rustc` (or `/usr/local/bin/rustc` on Intel). Because `find_fallback_paths("rustc")` previously only searched `~/.cargo/bin` and `/usr/local/cargo/bin`, `probe_with_path` failed during fallback discovery tests when `PATH` was set to a minimal or nonexistent test directory. Adding canonical Unix paths and toolchain directories ensures reliable fallback detection across all platforms without breaking Linux or Windows.
+
+
 
 
 

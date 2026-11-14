@@ -40,9 +40,12 @@ impl Sandbox {
         // async-signal-safe operations are allowed here; `setrlimit` qualifies.
         unsafe {
             cmd.pre_exec(move || {
-                set_limit(libc::RLIMIT_AS, limits.memory_bytes)?;
+                #[cfg(target_os = "linux")]
+                {
+                    set_limit(libc::RLIMIT_AS, limits.memory_bytes)?;
+                    set_limit(libc::RLIMIT_NPROC, effective_nproc)?;
+                }
                 set_limit(libc::RLIMIT_CPU, limits.cpu_seconds)?;
-                set_limit(libc::RLIMIT_NPROC, effective_nproc)?;
                 set_limit(libc::RLIMIT_FSIZE, max_file_size)?;
                 Ok(())
             });
@@ -77,9 +80,20 @@ type RlimitResource = libc::c_int;
 
 /// Installs a single rlimit.
 fn set_limit(resource: RlimitResource, value: u64) -> io::Result<()> {
+    let mut current = libc::rlimit {
+        rlim_cur: 0,
+        rlim_max: 0,
+    };
+    let (cur, max) = if unsafe { libc::getrlimit(resource, &mut current) } == 0 {
+        let hard = current.rlim_max as u64;
+        let soft = value.min(hard);
+        (soft as libc::rlim_t, current.rlim_max)
+    } else {
+        (value as libc::rlim_t, value as libc::rlim_t)
+    };
     let limit = libc::rlimit {
-        rlim_cur: value as libc::rlim_t,
-        rlim_max: value as libc::rlim_t,
+        rlim_cur: cur,
+        rlim_max: max,
     };
     // Safety: `limit` is a valid, fully initialised `rlimit` structure.
     let result = unsafe { libc::setrlimit(resource, &limit) };
@@ -132,6 +146,7 @@ mod tests {
     use std::process::Stdio;
 
     #[test]
+    #[cfg(target_os = "linux")]
     fn applies_rlimits_to_a_child_process() {
         let limits = Limits {
             memory_bytes: 256 * 1024 * 1024,
@@ -157,6 +172,32 @@ mod tests {
         let address_space = lines.next().unwrap_or_default().trim().parse::<u64>().unwrap();
         assert_eq!(address_space, 256 * 1024);
         let cpu = lines.next().unwrap_or_default().trim().parse::<u64>().unwrap();
+        assert_eq!(cpu, 7);
+    }
+
+    #[test]
+    #[cfg(not(target_os = "linux"))]
+    fn applies_rlimits_to_a_child_process() {
+        let limits = Limits {
+            memory_bytes: 256 * 1024 * 1024,
+            cpu_seconds: 7,
+            max_processes: 32,
+            ..Limits::default()
+        };
+        let sandbox = Sandbox::new(&limits).unwrap();
+
+        let mut cmd = Command::new("/bin/sh");
+        cmd.arg("-c")
+            .arg("ulimit -t")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
+        sandbox.apply(&mut cmd).unwrap();
+
+        let output = cmd.output().unwrap();
+        assert!(output.status.success());
+        let text = String::from_utf8_lossy(&output.stdout);
+        let cpu = text.lines().next().unwrap_or_default().trim().parse::<u64>().unwrap();
         assert_eq!(cpu, 7);
     }
 

@@ -47,6 +47,7 @@ built with **Tauri v2** (Rust backend) and a **React + TypeScript + CodeMirror 6
 | D24 | Cross-platform CI parity: Darwin `RlimitResource` abstraction and Windows CRLF stream normalization |
 | D25 | WebKitGTK software compositing and Tauri custom protocol bundling (blank screen fix) |
 | D26 | Standard Tauri workspace structure: `frontend/src-tauri` directory eliminates symlink failure on Windows |
+| D27 | macOS Darwin resource limits (`EINVAL`) and extended toolchain fallback paths |
 
 ---
 
